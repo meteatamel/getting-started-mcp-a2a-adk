@@ -56,5 +56,5 @@ if __name__ == "__main__":
 
     PORT = int(os.getenv("PORT", 8082))
     logger.info(f"🚀 Starting travel_agent Web UI on port {PORT}")
-    app = get_fast_api_app(web=True, agents_dir=os.path.dirname(__file__) or ".")
+    app = get_fast_api_app(web=True, allow_origins=["*"], agents_dir=os.path.dirname(__file__) or ".")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
