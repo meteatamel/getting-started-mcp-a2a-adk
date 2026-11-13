@@ -16,6 +16,7 @@ import com.google.genai.types.Part;
 import io.a2a.client.Client;
 import io.a2a.client.config.ClientConfig;
 import io.a2a.client.http.A2ACardResolver;
+import io.a2a.client.http.A2AHttpClient;
 import io.a2a.client.http.JdkA2AHttpClient;
 import io.a2a.client.transport.jsonrpc.JSONRPCTransport;
 import io.a2a.client.transport.jsonrpc.JSONRPCTransportConfig;
@@ -50,11 +51,15 @@ public final class TravelAgent {
         logger.info("--- 🔗 Connecting to Remote A2A Currency Agent at {}... ---", currencyAgentUrl);
 
         String agentCardUrl = currencyAgentUrl + "/.well-known/agent-card.json";
+        A2AHttpClient httpClient = new JdkA2AHttpClient();
+        // Uncomment to enable Cloud Run IAM authentication (and comment out the line above):
+        // A2AHttpClient httpClient = CloudRunAuth.createA2AHttpClient(currencyAgentUrl);
+
         AgentCard publicAgentCard =
-                new A2ACardResolver(new JdkA2AHttpClient(), currencyAgentUrl, agentCardUrl).getAgentCard();
+                new A2ACardResolver(httpClient, currencyAgentUrl, agentCardUrl).getAgentCard();
 
         Client a2aClient = Client.builder(publicAgentCard)
-                .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig())
+                .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig(httpClient))
                 .clientConfig(
                         new ClientConfig.Builder()
                                 .setStreaming(publicAgentCard.capabilities().streaming())

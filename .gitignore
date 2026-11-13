@@ -183,3 +183,6 @@ target/
 .mvn/
 .DS_Store
 
+# Local codelab preview
+codelab/
+

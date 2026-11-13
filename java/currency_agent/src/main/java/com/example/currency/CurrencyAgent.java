@@ -38,6 +38,8 @@ public final class CurrencyAgent {
                 .build();
 
         McpToolset mcpToolset = new McpToolset(streamableParams);
+        // Uncomment to enable Cloud Run IAM authentication (and comment out the line above):
+        // McpToolset mcpToolset = CloudRunAuth.createMcpToolset(streamableParams);
 
         return LlmAgent.builder()
                 .model("gemini-3.8-flash")

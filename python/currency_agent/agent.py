@@ -7,6 +7,11 @@ from google.adk.agents import LlmAgent
 from google.adk.a2a.utils.agent_to_a2a import to_a2a
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
+try:
+    from currency_agent.auth import get_mcp_http_client_factory
+except ImportError:
+    from auth import get_mcp_http_client_factory
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="[%(levelname)s]: %(message)s", level=logging.INFO)
 
@@ -35,7 +40,9 @@ root_agent = LlmAgent(
     tools=[
         McpToolset(
             connection_params=StreamableHTTPConnectionParams(
-                url=mcp_server_url
+                url=mcp_server_url,
+                # Uncomment to enable Cloud Run IAM authentication:
+                httpx_client_factory=get_mcp_http_client_factory(mcp_server_url),
             )
         )
     ],
