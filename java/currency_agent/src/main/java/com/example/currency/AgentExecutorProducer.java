@@ -1,5 +1,6 @@
 package com.example.currency;
 
+import com.google.adk.a2a.executor.AgentExecutor.Builder;
 import com.google.adk.a2a.executor.AgentExecutorConfig;
 import com.google.adk.artifacts.InMemoryArtifactService;
 import com.google.adk.sessions.InMemorySessionService;
@@ -15,7 +16,7 @@ public class AgentExecutorProducer {
 
     @Produces
     public AgentExecutor agentExecutor() {
-        return new com.google.adk.a2a.executor.AgentExecutor.Builder()
+        return new Builder()
                 .agent(CurrencyAgent.ROOT_AGENT)
                 .appName("currency_agent")
                 .sessionService(new InMemorySessionService())

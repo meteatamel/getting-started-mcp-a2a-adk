@@ -6,7 +6,6 @@ import com.google.adk.agents.BaseAgent;
 import com.google.adk.agents.LlmAgent;
 import com.google.adk.tools.Annotations.Schema;
 import com.google.adk.tools.FunctionTool;
-import com.google.common.collect.ImmutableList;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -14,7 +13,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +28,11 @@ public final class WeatherAgent {
             .connectTimeout(Duration.ofSeconds(8))
             .build();
 
-    private static final String SYSTEM_INSTRUCTION =
-            "You are a specialized assistant for providing weather forecasts and conditions for travel destinations. "
-            + "Your sole purpose is to use the 'get_weather' tool to fetch weather information. "
-            + "Provide clear, concise summaries of current weather conditions, temperatures, and forecasts to help travelers pack and plan.";
+    private static final String SYSTEM_INSTRUCTION = """
+            You are a specialized assistant for providing weather forecasts and conditions for travel destinations.
+            Your sole purpose is to use the 'get_weather' tool to fetch weather information.
+            Provide clear, concise summaries of current weather conditions, temperatures, and forecasts to help travelers pack and plan.
+            """;
 
     @Schema(
             name = "get_weather",
@@ -67,27 +66,26 @@ public final class WeatherAgent {
             String humidity = current.path("humidity").asText("N/A");
             String windSpeedKmph = current.path("windspeedKmph").asText("N/A");
 
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("location", loc);
-            result.put("condition", desc);
-            result.put("temperature_celsius", tempC + "°C");
-            result.put("temperature_fahrenheit", tempF + "°F");
-            result.put("humidity", humidity + "%");
-            result.put("wind_speed_kmph", windSpeedKmph + " km/h");
+            Map<String, Object> result = Map.of(
+                    "location", loc,
+                    "condition", desc,
+                    "temperature_celsius", tempC + "°C",
+                    "temperature_fahrenheit", tempF + "°F",
+                    "humidity", humidity + "%",
+                    "wind_speed_kmph", windSpeedKmph + " km/h");
 
             logger.info("✅ Weather data fetched: {}", result);
             return result;
         } catch (Exception e) {
             logger.warn("⚠️ Weather lookup via API failed: {}. Returning simulated estimate.", e.getMessage());
-            Map<String, Object> fallback = new LinkedHashMap<>();
-            fallback.put("location", loc);
-            fallback.put("condition", "Partly Cloudy");
-            fallback.put("temperature_celsius", "20°C");
-            fallback.put("temperature_fahrenheit", "68°F");
-            fallback.put("humidity", "55%");
-            fallback.put("wind_speed_kmph", "10 km/h");
-            fallback.put("note", "Live data unavailable (" + e.getMessage() + "); showing estimated conditions.");
-            return fallback;
+            return Map.of(
+                    "location", loc,
+                    "condition", "Partly Cloudy",
+                    "temperature_celsius", "20°C",
+                    "temperature_fahrenheit", "68°F",
+                    "humidity", "55%",
+                    "wind_speed_kmph", "10 km/h",
+                    "note", "Live data unavailable (" + e.getMessage() + "); showing estimated conditions.");
         }
     }
 
@@ -96,7 +94,7 @@ public final class WeatherAgent {
             .name("weather_agent")
             .description("A local specialist agent that provides current weather reports and forecasts for travel destinations.")
             .instruction(SYSTEM_INSTRUCTION)
-            .tools(ImmutableList.of(FunctionTool.create(WeatherAgent.class, "getWeather")))
+            .tools(FunctionTool.create(WeatherAgent.class, "getWeather"))
             .build();
 
     private WeatherAgent() {

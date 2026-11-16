@@ -10,7 +10,6 @@ import com.google.adk.runner.InMemoryRunner;
 import com.google.adk.sessions.Session;
 import com.google.adk.tools.AgentTool;
 import com.google.adk.web.AdkWebServer;
-import com.google.common.collect.ImmutableList;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.a2a.client.Client;
@@ -33,13 +32,12 @@ public final class TravelAgent {
 
     private static final Logger logger = LoggerFactory.getLogger(TravelAgent.class);
 
-    private static final String SYSTEM_INSTRUCTION =
-            "You are a helpful travel assistant. You help users plan trips, recommend places, "
-            + "and answer travel-related questions.\n\n"
-            + "- Whenever a user asks about currency exchange rates or money conversions, "
-            + "delegate the request to the 'currency_agent' tool.\n"
-            + "- Whenever a user asks about the weather, climate, or forecasts for a destination, "
-            + "delegate the request to the 'weather_agent' tool.";
+    private static final String SYSTEM_INSTRUCTION = """
+            You are a helpful travel assistant. You help users plan trips, recommend places, and answer travel-related questions.
+
+            - Whenever a user asks about currency exchange rates or money conversions, delegate the request to the 'currency_agent' tool.
+            - Whenever a user asks about the weather, climate, or forecasts for a destination, delegate the request to the 'weather_agent' tool.
+            """;
 
     public static final BaseAgent ROOT_AGENT = createRootAgent();
 
@@ -80,9 +78,9 @@ public final class TravelAgent {
                 .name("travel_agent")
                 .description("A travel assistant that can help plan trips, check weather forecasts via the local weather agent, and convert currencies via the remote currency agent.")
                 .instruction(SYSTEM_INSTRUCTION)
-                .tools(ImmutableList.of(
+                .tools(
                         AgentTool.create(currencyRemoteAgent),
-                        AgentTool.create(WeatherAgent.WEATHER_AGENT)))
+                        AgentTool.create(WeatherAgent.WEATHER_AGENT))
                 .build();
     }
 
