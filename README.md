@@ -9,6 +9,8 @@
 
 This **`production` branch** is **Part 2** of the `getting-started-mcp-a2a-adk` sample. It takes the exact 3-tier multi-agent system from Part 1 ([`main` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/main))—`travel_agent` → `currency_agent` (A2A) → `currency_mcp_server` (MCP)—and productionizes it on Google Cloud using the **Gemini Enterprise Agent Platform** (**Scale → Govern → Optimize**).
 
+![Production Architecture Overview](images/architecture.png)
+
 ---
 
 ## 🔍 What Part 2 Adds Over Part 1
