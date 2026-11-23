@@ -12,7 +12,9 @@ A sample multi-agent system demonstrating **Model Context Protocol (MCP)** and
 **Agent2Agent (A2A)** working together with **Agent Development Kit (ADK)**. 
 All services can be run completely locally or fully deployed to Google Cloud Run.
 
-> 🎓 **Hands-on Codelab:** Follow the step-by-step tutorial at **[Getting Started with MCP, A2A, and ADK Codelab](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk)**.
+> 🎓 **Hands-on Codelab (Part 1):** Follow the step-by-step tutorial at **[Getting Started with MCP, A2A, and ADK Codelab](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk)**.
+>
+> 🚀 **Ready for Production (Part 2)?** Check out the **[`production` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/production)** to productionize this multi-agent system with **Agent Runtime**, **Agent Registry**, **Agent Identity**, **Agent Gateway + Model Armor**, **Observability**, and **Evaluation**.
 
 ![Architecture Overview](images/architecture.png)
 
