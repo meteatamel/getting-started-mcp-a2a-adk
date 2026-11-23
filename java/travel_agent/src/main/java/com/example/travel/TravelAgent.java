@@ -4,14 +4,7 @@ import com.example.travel.subagents.WeatherAgent;
 import com.google.adk.a2a.agent.RemoteA2AAgent;
 import com.google.adk.agents.BaseAgent;
 import com.google.adk.agents.LlmAgent;
-import com.google.adk.agents.RunConfig;
-import com.google.adk.events.Event;
-import com.google.adk.runner.InMemoryRunner;
-import com.google.adk.sessions.Session;
 import com.google.adk.tools.AgentTool;
-import com.google.adk.web.AdkWebServer;
-import com.google.genai.types.Content;
-import com.google.genai.types.Part;
 import io.a2a.client.Client;
 import io.a2a.client.config.ClientConfig;
 import io.a2a.client.http.A2ACardResolver;
@@ -20,12 +13,11 @@ import io.a2a.client.http.JdkA2AHttpClient;
 import io.a2a.client.transport.jsonrpc.JSONRPCTransport;
 import io.a2a.client.transport.jsonrpc.JSONRPCTransportConfig;
 import io.a2a.spec.AgentCard;
-import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Orchestrating Travel Agent serving the ADK Web UI, delegating weather queries to the local
+ * Orchestrating Travel Agent exposed over A2A, delegating weather queries to the local
  * {@link WeatherAgent} and currency queries to the remote A2A Currency Agent.
  */
 public final class TravelAgent {
@@ -50,8 +42,6 @@ public final class TravelAgent {
 
         String agentCardUrl = currencyAgentUrl + "/.well-known/agent-card.json";
         A2AHttpClient httpClient = new JdkA2AHttpClient();
-        // Uncomment to enable Cloud Run IAM authentication (and comment out the line above):
-        // A2AHttpClient httpClient = CloudRunAuth.createA2AHttpClient(currencyAgentUrl);
 
         AgentCard publicAgentCard =
                 new A2ACardResolver(httpClient, currencyAgentUrl, agentCardUrl).getAgentCard();
@@ -82,32 +72,6 @@ public final class TravelAgent {
                         AgentTool.create(currencyRemoteAgent),
                         AgentTool.create(WeatherAgent.WEATHER_AGENT))
                 .build();
-    }
-
-    public static void main(String[] args) {
-        if (args.length > 0) {
-            String query = String.join(" ", args);
-            logger.info("Running CLI query against travel_agent: {}", query);
-            RunConfig runConfig = RunConfig.builder().build();
-            InMemoryRunner runner = new InMemoryRunner(ROOT_AGENT);
-            Session session = runner.sessionService()
-                    .createSession(runner.appName(), "user123")
-                    .blockingGet();
-            Content userMsg = Content.fromParts(Part.fromText(query));
-            Flowable<Event> events = runner.runAsync(session.userId(), session.id(), userMsg, runConfig);
-            events.blockingForEach(event -> {
-                if (event.finalResponse()) {
-                    System.out.println(event.stringifyContent());
-                }
-            });
-            return;
-        }
-
-        String port = System.getenv().getOrDefault("PORT", "8082");
-        System.setProperty("server.port", port);
-        System.setProperty("server.address", "0.0.0.0");
-        logger.info("🚀 Starting travel_agent Web UI on port {}", port);
-        AdkWebServer.start(ROOT_AGENT);
     }
 
     private TravelAgent() {

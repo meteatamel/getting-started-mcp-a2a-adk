@@ -18,21 +18,15 @@ public class TestServer {
 
     public static void main(String[] args) {
         String mcpUrl = System.getenv().getOrDefault("MCP_SERVER_URL", "http://localhost:8080/mcp");
-        String idToken = System.getenv("ID_TOKEN");
         System.out.println("Connecting to MCP server at: " + mcpUrl);
 
         URI uri = URI.create(mcpUrl);
         String baseUri = uri.getScheme() + "://" + uri.getAuthority();
         String endpoint = (uri.getRawPath() == null || uri.getRawPath().isEmpty()) ? "/mcp" : uri.getRawPath();
 
-        HttpClientStreamableHttpTransport.Builder transportBuilder = HttpClientStreamableHttpTransport.builder(baseUri)
-                .endpoint(endpoint);
-        if (idToken != null && !idToken.isBlank()) {
-            transportBuilder.httpRequestCustomizer(
-                    (builder, method, requestUri, body, context) ->
-                            builder.header("Authorization", "Bearer " + idToken));
-        }
-        HttpClientStreamableHttpTransport transport = transportBuilder.build();
+        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport.builder(baseUri)
+                .endpoint(endpoint)
+                .build();
 
         try (McpSyncClient client = McpClient.sync(transport).build()) {
             client.initialize();

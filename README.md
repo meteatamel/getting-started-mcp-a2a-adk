@@ -44,30 +44,30 @@ The MCP server in this example exposes a tool `get_exchange_rate` that can be us
 
 > Agent2Agent (A2A) protocol addresses a critical challenge in the AI landscape: enabling gen AI agents, built on diverse frameworks by different companies running on separate servers, to communicate and collaborate effectively - as agents, not just as tools. A2A aims to provide a common language for agents, fostering a more interconnected, powerful, and innovative AI ecosystem. - [A2A](https://github.com/a2aproject/A2A)
 
-In this sample, ADK is used to expose `currency_agent` as an A2A server and consume it from `travel_agent` as a remote A2A agent (`RemoteA2aAgent` / `RemoteA2AAgent`).
+In this sample, ADK is used to expose both `currency_agent` and `travel_agent` as A2A servers, with `travel_agent` consuming `currency_agent` as a remote A2A agent (`RemoteA2aAgent` / `RemoteA2AAgent`).
 
 ### <img height="20" width="20" src="images/adk-favicon.ico" alt="ADK Logo" /> Agent Development Kit (ADK)
 
 > ADK is a flexible and modular framework for developing and deploying AI agents. While optimized for Gemini and the Google ecosystem, ADK is model-agnostic, deployment-agnostic, and is built for compatibility with other frameworks. - [ADK](https://adk.dev/)
 
-ADK is used as the orchestration framework for creating our agents in this sample. It handles the conversation with the user, serves the Web UI, invokes our MCP tool when needed, and handles the A2A communication.
+ADK is used as the orchestration framework for creating our agents in this sample. It handles the conversation with the user, invokes our MCP tool when needed, and handles the A2A communication.
 
 ---
 
 ## 🏗️ Architecture Overview
 
-The system consists of 1 orchestrating agent with Web UI, 1 remote agent via A2A, 1 local agent tool, and 1 MCP server:
+The system consists of 1 orchestrating A2A agent, 1 remote specialist agent via A2A, 1 local agent tool, and 1 MCP server:
 
 ```
 +-----------------------------------------------------------------------------------+
 |                                  Clients                                          |
-|                     ADK Web UI (Browser)  |  HTTP Callers                         |
+|                      a2a-cli (CLI)  |  ADK Web UI (Local Dev)                     |
 +------------------------------------------+----------------------------------------+
-                                           | (HTTP / Web UI)
+                                           | (A2A Protocol / JSON-RPC)
                                            v
 +-----------------------------------------------------------------------------------+
 | travel_agent (Port 8082 / Cloud Run)                                              |
-| - Orchestrating ADK Agent serving the ADK Web UI                                  |
+| - Orchestrating ADK Agent exposed via A2A                                         |
 |                                                                                   |
 |   +--> [Local AgentTool] weather_agent (travel_agent/subagents/)                  |
 |        - Directly wrapped as AgentTool (no A2A network overhead)                  |
@@ -94,7 +94,7 @@ The system consists of 1 orchestrating agent with Web UI, 1 remote agent via A2A
 
 - **`currency_mcp_server/`**: An MCP server exposing the `get_exchange_rate` tool over Streamable HTTP (`/mcp`), backed by the public [Frankfurter API](https://api.frankfurter.dev/).
 - **`currency_agent/`**: An ADK agent connected to the MCP server via `McpToolset`. Exposed as an A2A service.
-- **`travel_agent/`**: A travel assistant ADK agent serving the ADK Web UI. It coordinates between:
+- **`travel_agent/`**: A travel assistant ADK agent exposed as an A2A service. It coordinates between:
   - **`weather_agent`** (in `travel_agent/subagents/`): A **local agent wrapped as an `AgentTool`**, demonstrating in-process agent tool usage without A2A network hops.
   - **`currency_agent`**: A **remote agent wrapped as an `AgentTool`**, delegating requests over the A2A protocol.
 

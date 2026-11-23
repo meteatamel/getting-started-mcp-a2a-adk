@@ -9,15 +9,27 @@
     <version>0.1.0</version>
 
     <name>Travel Agent (ADK + Remote A2A + Local Subagent)</name>
-    <description>Travel assistant agent using ADK, remote A2A currency agent, and local weather agent</description>
+    <description>Travel assistant agent using ADK, remote A2A currency agent, and local weather agent, exposed via A2A</description>
 
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <google-adk.version>1.13.0</google-adk.version>
         <a2a.sdk.version>0.3.2.Final</a2a.sdk.version>
-        <exec.mainClass>com.example.travel.TravelAgent</exec.mainClass>
+        <quarkus.platform.version>3.28.2</quarkus.platform.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.quarkus.platform</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -31,14 +43,39 @@
             <version>${google-adk.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.adk</groupId>
-            <artifactId>google-adk-dev</artifactId>
-            <version>${google-adk.version}</version>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-reference-jsonrpc</artifactId>
+            <version>${a2a.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-spec</artifactId>
+            <version>${a2a.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.a2asdk</groupId>
             <artifactId>a2a-java-sdk-client</artifactId>
             <version>${a2a.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-routes</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
     </dependencies>
 
@@ -54,13 +91,18 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <configuration>
-                    <mainClass>${exec.mainClass}</mainClass>
-                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                </configuration>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

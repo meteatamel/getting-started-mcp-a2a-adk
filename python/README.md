@@ -28,6 +28,11 @@ Project dependencies are organized as a unified **`uv` Workspace**:
   # macOS / Linux
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
+- [a2a-cli](https://github.com/a2aproject/a2a-cli) (for testing the A2A agents):
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/a2aproject/a2a-cli/main/install.sh | A2A_INSTALL_DIR="$HOME/.local/bin" bash
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
 - Google Cloud SDK (`gcloud`) if deploying to Cloud Run.
 
 ### Installation
@@ -67,7 +72,7 @@ You can run all three services concurrently in separate terminal windows from th
 
 ### Step 1: Start Currency MCP Server
 
-Start MCP server locally in terminal 1:
+Start MCP server locally in terminal 1 (runs on port 8080):
 
 ```bash
 uv run python currency_mcp_server/server.py
@@ -75,7 +80,7 @@ uv run python currency_mcp_server/server.py
 
 ### Step 2: Start Currency Agent
 
-Start agent locally in terminal 2:
+Start the A2A currency agent locally in terminal 2 (runs on port 8081):
 
 ```bash
 uv run python currency_agent/agent.py
@@ -83,13 +88,11 @@ uv run python currency_agent/agent.py
 
 ### Step 3: Start Travel Agent
 
-Start travel agent locally in terminal 3 (starts the ADK Web UI on port 8082):
+Start the A2A travel agent locally in terminal 3 (runs on port 8082):
 
 ```bash
 uv run python travel_agent/agent.py
 ```
-
-*(Alternatively, you can run `uv run adk web travel_agent` to launch it on port 8000).*
 
 ### 🧪 Testing
 
@@ -99,26 +102,31 @@ Test the MCP server:
 uv run python currency_mcp_server/test_server.py
 ```
 
-Test the currency agent (over A2A protocol):
+Test the currency agent over A2A with `a2a-cli` (or `uv run python currency_agent/test_a2aclient.py`):
 
 ```bash
-uv run python currency_agent/test_a2aclient.py
+a2a card get http://localhost:8081
+a2a send -a http://localhost:8081 "How much is 100 USD in GBP?"
 ```
 
-Test the travel agent (Interactive ADK Web UI):
+Test the travel agent over A2A with `a2a-cli`:
 
-Open your browser at `http://localhost:8082` (or `http://localhost:8000` if using `adk web`) and chat with `travel_agent`:
-> *"I'm planning a trip to London. What is the weather like and how much is 200 EUR in GBP?"*
+```bash
+# Inspect the Travel Agent's Agent Card
+a2a card get http://localhost:8082
+
+# Send an end-to-end travel query
+a2a send -a http://localhost:8082 \
+  "I'm planning a trip to London. What is the weather like and how much is 200 EUR in GBP?"
+```
 
 This runs end-to-end:
-1. Queries travel and currency conversion (delegated via A2A to `currency_agent` -> `currency_mcp_server`).
+1. Sends an A2A request to `travel_agent` (`:8082`).
 2. Queries weather forecasts (delegated to local `weather_agent` in `travel_agent/subagents/`).
+3. Queries currency conversion (delegated via A2A to `currency_agent` `:8081` -> `currency_mcp_server` `:8080`).
 
-You can also test queries directly from the command line:
-
-```bash
-uv run adk run travel_agent "What is the weather in London and how much is 100 USD in EUR?"
-```
+> [!TIP]
+> **Optional Local Dev UI:** During local development, you can also run `uv run adk web` from the `python/` directory (with `currency_mcp_server` and `currency_agent` running) to chat with `travel_agent` in the browser and inspect tool calls and traces visually on `http://localhost:8000`.
 
 ---
 
@@ -143,7 +151,7 @@ gcloud services enable run.googleapis.com \
 ```
 
 > [!WARNING]
-> For simplicity in this initial deployment, services are deployed with `--allow-unauthenticated`. See the optional **[Securing Cloud Run Services (IAM Authentication)](#-optional-securing-cloud-run-services-iam-authentication)** section at the end of this guide to lock down all three services with dedicated service accounts and OIDC ID tokens.
+> For simplicity in this getting-started sample, all services are deployed with `--allow-unauthenticated`, making them publicly accessible. **Do not use this configuration in production**—always lock down service-to-service traffic with IAM authentication, Agent Identity, and/or Agent Gateway.
 
 ### Step 1: Deploy Currency MCP Server
 
@@ -183,10 +191,10 @@ gcloud run services update currency-agent \
 
 ### Step 3: Deploy Travel Agent
 
-Deploy `travel-agent` connected to `CURRENCY_AGENT_URL`:
+Deploy `travel-agent` connected to `CURRENCY_AGENT_URL`, then set its `AGENT_URL` so its Agent Card advertises its public Cloud Run URL:
 
 ```bash
-# 1. Deploy Travel Agent (with ADK Web UI) connected to Currency Agent
+# 1. Deploy Travel Agent connected to Currency Agent
 gcloud run deploy travel-agent \
   --source travel_agent \
   --region $REGION \
@@ -196,17 +204,12 @@ gcloud run deploy travel-agent \
 # 2. Capture its assigned Cloud Run URL
 TRAVEL_AGENT_URL=$(gcloud run services describe travel-agent --region $REGION --format='value(status.url)')
 echo "Travel Agent URL: $TRAVEL_AGENT_URL"
-```
 
-> [!TIP]
-> You can also deploy `travel_agent` using ADK's `adk deploy cloud_run` with the `--with_ui` flag:
-> ```bash
-> uv run adk deploy cloud_run travel_agent \
->   --project $PROJECT_ID \
->   --region $REGION \
->   --with_ui \
->   --env CURRENCY_AGENT_URL="$CURRENCY_AGENT_URL"
-> ```
+# 3. Update AGENT_URL so the agent advertises its public HTTPS endpoint in its Agent Card
+gcloud run services update travel-agent \
+  --region $REGION \
+  --update-env-vars AGENT_URL="$TRAVEL_AGENT_URL"
+```
 
 ### 🧪 Testing
 
@@ -216,140 +219,23 @@ Test the MCP server:
 MCP_SERVER_URL="$MCP_SERVER_URL" uv run python currency_mcp_server/test_server.py
 ```
 
-Test the currency agent (over A2A protocol):
+Test the currency agent over A2A:
 
 ```bash
-AGENT_URL="$CURRENCY_AGENT_URL" uv run python currency_agent/test_a2aclient.py
+a2a card get "$CURRENCY_AGENT_URL"
+a2a send -a "$CURRENCY_AGENT_URL" "How much is 100 USD in GBP?"
 ```
 
-Test the travel agent (Directly in Cloud Run via Web UI):
+Test the travel agent over A2A:
 
-Simply open `$TRAVEL_AGENT_URL` in your browser! The ADK Web UI is served directly from Cloud Run:
-> *"I'm planning a trip to Tokyo. What is the weather like and how much is 500 USD in JPY?"*
+```bash
+a2a card get "$TRAVEL_AGENT_URL"
+a2a send -a "$TRAVEL_AGENT_URL" \
+  "I'm planning a trip to Tokyo. What is the weather like and how much is 500 USD in JPY?"
+```
 
 This tests the complete end-to-end multi-agent system running in Cloud Run:
-1. The **ADK Web UI** loaded from `travel-agent` on Cloud Run.
+1. Remote A2A invocation via `a2a-cli` to `travel-agent` on Cloud Run.
 2. In-process execution of the local `weather_agent` tool in Cloud Run.
 3. Remote A2A invocation across Cloud Run to `currency-agent`.
 4. Remote MCP invocation across Cloud Run to `currency-mcp-server`.
-
----
-
-## 🔒 (Optional) Securing Cloud Run Services (IAM Authentication)
-
-To lock down all three Cloud Run services so they require IAM authentication (`roles/run.invoker`) and run with least-privilege service accounts:
-
-### 1. Create Least-Privilege Service Accounts
-
-```bash
-gcloud iam service-accounts create currency-mcp-sa --display-name="Currency MCP Server SA"
-gcloud iam service-accounts create currency-agent-sa --display-name="Currency Agent SA"
-gcloud iam service-accounts create travel-agent-sa --display-name="Travel Agent SA"
-
-# Grant Vertex AI access only to the two LLM agents
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:currency-agent-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:travel-agent-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
-```
-
-### 2. Uncomment OIDC Authentication in Both Agents
-
-Both agents include an `auth.py` helper (`GoogleIdTokenAuth`) that automatically attaches and refreshes Google-signed OIDC ID tokens for `https://` Cloud Run targets while leaving `http://localhost` development unchanged:
-
-1. In `currency_agent/agent.py`, uncomment `httpx_client_factory`:
-   ```python
-   McpToolset(
-       connection_params=StreamableHTTPConnectionParams(
-           url=mcp_server_url,
-           # Uncomment to enable Cloud Run IAM authentication:
-           httpx_client_factory=get_mcp_http_client_factory(mcp_server_url),
-       )
-   )
-   ```
-2. In `travel_agent/agent.py`, uncomment `httpx_client`:
-   ```python
-   currency_remote_agent = RemoteA2aAgent(
-       name="currency_agent",
-       agent_card=f"{CURRENCY_AGENT_URL}{AGENT_CARD_WELL_KNOWN_PATH}",
-       description="An agent that can help with currency conversions and exchange rates.",
-       # Uncomment to enable Cloud Run IAM authentication:
-       httpx_client=get_a2a_http_client(CURRENCY_AGENT_URL),
-   )
-   ```
-
-### 3. Lock Down Services & Grant Hop-by-Hop `roles/run.invoker`
-
-```bash
-# 1. Lock down currency-mcp-server & grant currency-agent-sa invoker access
-gcloud run services update currency-mcp-server \
-  --region $REGION \
-  --service-account="currency-mcp-sa@$PROJECT_ID.iam.gserviceaccount.com"
-
-gcloud run services remove-iam-policy-binding currency-mcp-server \
-  --region $REGION \
-  --member="allUsers" \
-  --role="roles/run.invoker"
-
-gcloud run services add-iam-policy-binding currency-mcp-server \
-  --region $REGION \
-  --member="serviceAccount:currency-agent-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/run.invoker"
-
-# 2. Redeploy currency-agent with auth enabled & grant travel-agent-sa invoker access
-gcloud run deploy currency-agent \
-  --source currency_agent \
-  --region $REGION \
-  --no-allow-unauthenticated \
-  --service-account="currency-agent-sa@$PROJECT_ID.iam.gserviceaccount.com"
-
-gcloud run services add-iam-policy-binding currency-agent \
-  --region $REGION \
-  --member="serviceAccount:travel-agent-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/run.invoker"
-
-# 3. Redeploy travel-agent with auth enabled
-gcloud run deploy travel-agent \
-  --source travel_agent \
-  --region $REGION \
-  --no-allow-unauthenticated \
-  --service-account="travel-agent-sa@$PROJECT_ID.iam.gserviceaccount.com"
-
-# 4. Grant your user account invoker access for testing
-USER_EMAIL=$(gcloud config get-value account)
-for SERVICE in currency-mcp-server currency-agent travel-agent; do
-  gcloud run services add-iam-policy-binding $SERVICE \
-    --region $REGION \
-    --member="user:$USER_EMAIL" \
-    --role="roles/run.invoker"
-done
-```
-
-### 4. Test Authenticated Services
-
-Verify that unauthenticated requests are now blocked (`403 Forbidden`):
-
-```bash
-MCP_SERVER_URL="$MCP_SERVER_URL" uv run python currency_mcp_server/test_server.py
-AGENT_URL="$CURRENCY_AGENT_URL" uv run python currency_agent/test_a2aclient.py
-```
-
-Now pass an identity token (`ID_TOKEN`) to authenticate your CLI requests and proxy the Web UI:
-
-```bash
-# Test MCP server with an identity token
-ID_TOKEN=$(gcloud auth print-identity-token) \
-  MCP_SERVER_URL="$MCP_SERVER_URL" \
-  uv run python currency_mcp_server/test_server.py
-
-# Test Currency Agent over A2A with an identity token
-ID_TOKEN=$(gcloud auth print-identity-token) \
-  AGENT_URL="$CURRENCY_AGENT_URL" \
-  uv run python currency_agent/test_a2aclient.py
-
-# Access the authenticated Travel Agent Web UI locally on http://localhost:8080
-gcloud run services proxy travel-agent --region $REGION --port 8080
-```

@@ -6,11 +6,10 @@ from fastmcp import Client
 
 async def test_server():
     mcp_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/mcp")
-    id_token = os.getenv("ID_TOKEN")
     print(f"Connecting to MCP server at: {mcp_url}")
     # Test the MCP server using streamable-http transport.
     # Use "/sse" endpoint if using sse transport.
-    async with Client(mcp_url, auth=id_token) as client:
+    async with Client(mcp_url) as client:
         # List available tools
         tools = await client.list_tools()
         for tool in tools:

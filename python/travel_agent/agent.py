@@ -1,17 +1,17 @@
 import logging
 import os
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
+from google.adk.a2a.utils.agent_to_a2a import to_a2a
 from google.adk.agents import LlmAgent
 from google.adk.agents.remote_a2a_agent import AGENT_CARD_WELL_KNOWN_PATH, RemoteA2aAgent
 from google.adk.tools.agent_tool import AgentTool
 
 try:
     from travel_agent.subagents.weather_agent import weather_agent
-    from travel_agent.auth import get_a2a_http_client
 except ImportError:
     from subagents.weather_agent import weather_agent
-    from auth import get_a2a_http_client
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="[%(levelname)s]: %(message)s", level=logging.INFO)
@@ -38,8 +38,6 @@ currency_remote_agent = RemoteA2aAgent(
     name="currency_agent",
     agent_card=f"{CURRENCY_AGENT_URL}{AGENT_CARD_WELL_KNOWN_PATH}",
     description="An agent that can help with currency conversions and exchange rates.",
-    # Uncomment to enable Cloud Run IAM authentication:
-    httpx_client=get_a2a_http_client(CURRENCY_AGENT_URL),
 )
 
 logger.info("--- 🤖 Creating ADK Travel Agent... ---")
@@ -55,11 +53,24 @@ root_agent = LlmAgent(
     ],
 )
 
+# Make the agent A2A-compatible
+PORT = int(os.getenv("PORT", 8082))
+AGENT_URL = os.getenv("AGENT_URL")
+
+if AGENT_URL:
+    parsed = urlparse(AGENT_URL)
+    protocol = parsed.scheme or "https"
+    host = parsed.hostname
+    port = parsed.port or 443
+else:
+    protocol = "http"
+    host = "localhost"
+    port = PORT
+
+a2a_app = to_a2a(root_agent, host=host, port=port, protocol=protocol)
+
 if __name__ == "__main__":
     import uvicorn
-    from google.adk.cli.fast_api import get_fast_api_app
 
-    PORT = int(os.getenv("PORT", 8082))
-    logger.info(f"🚀 Starting travel_agent Web UI on port {PORT}")
-    app = get_fast_api_app(web=True, allow_origins=["*"], agents_dir=os.path.dirname(__file__) or ".")
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    logger.info(f"🚀 Starting travel_agent A2A server on port {PORT}")
+    uvicorn.run(a2a_app, host="0.0.0.0", port=PORT)

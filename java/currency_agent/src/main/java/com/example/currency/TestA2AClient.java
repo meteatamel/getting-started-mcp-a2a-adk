@@ -22,36 +22,13 @@ public class TestA2AClient {
 
     private static final String AGENT_URL =
             System.getenv().getOrDefault("AGENT_URL", "http://localhost:8081").replaceAll("/+$", "");
-    private static final String ID_TOKEN = System.getenv("ID_TOKEN");
-
-    private static A2AHttpClient createHttpClient() {
-        A2AHttpClient delegate = new JdkA2AHttpClient();
-        if (ID_TOKEN == null || ID_TOKEN.isBlank()) {
-            return delegate;
-        }
-        return new A2AHttpClient() {
-            @Override
-            public GetBuilder createGet() {
-                return delegate.createGet().addHeader("Authorization", "Bearer " + ID_TOKEN);
-            }
-
-            @Override
-            public PostBuilder createPost() {
-                return delegate.createPost().addHeader("Authorization", "Bearer " + ID_TOKEN);
-            }
-
-            @Override
-            public DeleteBuilder createDelete() {
-                return delegate.createDelete().addHeader("Authorization", "Bearer " + ID_TOKEN);
-            }
-        };
-    }
 
     public static AgentCard getAgentCard() {
         System.out.println("🔄 Fetching the agent card at " + AGENT_URL);
         String agentCardUrl = AGENT_URL + "/.well-known/agent-card.json";
+        A2AHttpClient httpClient = new JdkA2AHttpClient();
         AgentCard publicAgentCard =
-                new A2ACardResolver(createHttpClient(), AGENT_URL, agentCardUrl).getAgentCard();
+                new A2ACardResolver(httpClient, AGENT_URL, agentCardUrl).getAgentCard();
         System.out.println("✅ Successfully fetched the agent card");
         return publicAgentCard;
     }
@@ -59,7 +36,7 @@ public class TestA2AClient {
     public static void sendMessage(AgentCard publicAgentCard, String textQuery) throws Exception {
         System.out.println("🔄 Initializing a non-streaming client");
         Client a2aClient = Client.builder(publicAgentCard)
-                .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig(createHttpClient()))
+                .withTransport(JSONRPCTransport.class, new JSONRPCTransportConfig(new JdkA2AHttpClient()))
                 .clientConfig(new ClientConfig.Builder().setStreaming(false).build())
                 .build();
 
