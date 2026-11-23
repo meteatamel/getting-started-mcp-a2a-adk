@@ -1,0 +1,20 @@
+{
+  "criteria": {
+    "rubric_based_tool_use_quality_v1": {
+      "threshold": 0.8,
+      "judge_model_options": {
+        "judge_model": "gemini-3.8-flash",
+        "num_samples": 1
+      },
+      "rubrics": [
+        {
+          "rubric_id": "appropriate_tool_delegation",
+          "rubric_content": {
+            "text_property": "The agent delegates weather questions to the weather_agent tool and currency conversion questions to the currency_agent tool, passing clear arguments matching the user's request."
+          }
+        }
+      ]
+    },
+    "response_match_score": 0.2
+  }
+}

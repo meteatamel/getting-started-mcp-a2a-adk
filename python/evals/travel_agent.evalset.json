@@ -1,0 +1,115 @@
+{
+  "eval_set_id": "travel_agent_evalset",
+  "name": "Travel Agent Multi-Agent Evaluation Suite",
+  "description": "Verifies that travel_agent delegates weather queries to weather_agent, currency queries to currency_agent (A2A -> MCP), and compound queries to both.",
+  "eval_cases": [
+    {
+      "eval_id": "weather_only_london",
+      "conversation": [
+        {
+          "invocation_id": "inv-weather-1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "What is the current weather in London?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Here is the current weather in London including temperature, conditions, humidity, and wind speed."
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "weather_agent",
+                "args": {
+                  "request": "What is the current weather in London?"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "currency_only_usd_to_eur",
+      "conversation": [
+        {
+          "invocation_id": "inv-currency-1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "How much is 100 USD in EUR?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "100 USD converted to EUR at the current exchange rate."
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "currency_agent",
+                "args": {
+                  "request": "How much is 100 USD in EUR?"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "compound_tokyo_trip",
+      "conversation": [
+        {
+          "invocation_id": "inv-compound-1",
+          "user_content": {
+            "parts": [
+              {
+                "text": "I'm planning a trip to Tokyo. What is the weather like and how much is 500 USD in JPY?"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "Here is the current weather in Tokyo and the conversion of 500 USD to JPY."
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "weather_agent",
+                "args": {
+                  "request": "What is the current weather in Tokyo?"
+                }
+              },
+              {
+                "name": "currency_agent",
+                "args": {
+                  "request": "How much is 500 USD in JPY?"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

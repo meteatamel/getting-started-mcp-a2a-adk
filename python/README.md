@@ -1,241 +1,187 @@
-# Getting Started with MCP & A2A with ADK (Python)
+# Productionizing MCP, A2A & ADK on Google Cloud (Python)
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![Framework](https://img.shields.io/badge/Framework-ADK-4285F4.svg)](https://github.com/google/adk-python)
-[![Protocol](https://img.shields.io/badge/Protocol-A2A-34A853.svg)](https://github.com/a2aproject/a2a-python)
-[![Protocol](https://img.shields.io/badge/Protocol-MCP-EA4335.svg)](https://modelcontextprotocol.io/)
+This guide walks through deploying the **Part 2 (`production` branch)** multi-agent system on Google Cloud with **Agent Runtime**, **Agent Registry**, **Agent Identity**, **Agent Gateway + Model Armor**, **Observability**, and **Evaluation**.
 
-This directory contains the **Python** implementation of the MCP + A2A + ADK multi-agent system. See the [top-level README](../README.md) for the architecture overview and the [deployed codelab](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk).
+> [!NOTE]
+> Local development works identically to Part 1: when `MCP_SERVER_NAME` and `CURRENCY_AGENT_NAME` are not set, both agents automatically fall back to `http://localhost:8080/mcp` and `http://localhost:8081`.
 
 ---
 
-## 📦 Dependency Management (`uv` Workspace)
-
-Project dependencies are organized as a unified **`uv` Workspace**:
-- Root `pyproject.toml` orchestrates workspace members (`currency_mcp_server`, `currency_agent`, `travel_agent`).
-- Running `uv sync` at the `python/` root automatically resolves and installs all packages for local development into a single `.venv`.
-- Each service directory has its own self-contained `pyproject.toml` and `Dockerfile` for independent Cloud Run builds.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/getting-started/installation):
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-- [a2a-cli](https://github.com/a2aproject/a2a-cli) (for testing the A2A agents):
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/a2aproject/a2a-cli/main/install.sh | A2A_INSTALL_DIR="$HOME/.local/bin" bash
-  export PATH="$HOME/.local/bin:$PATH"
-  ```
-- Google Cloud SDK (`gcloud`) if deploying to Cloud Run.
-
-### Installation
-
-1. Clone the repository and navigate to the `python` folder:
-   ```bash
-   git clone https://github.com/meteatamel/getting-started-mcp-a2a-adk.git
-   cd getting-started-mcp-a2a-adk/python
-   ```
-
-2. Install all dependencies across the workspace:
-   ```bash
-   uv sync
-   ```
-
-3. Configure Environment Variables:
-   Create a `.env` file in the `python/` directory (or copy `.env.example` to `.env`).
-
-   **Option A: Google AI Studio**
-   ```sh
-   GOOGLE_API_KEY=<your_api_key_here>
-   GOOGLE_GENAI_USE_ENTERPRISE=FALSE
-   ```
-
-   **Option B: Gemini Enterprise (Google Cloud)**
-   ```sh
-   GOOGLE_GENAI_USE_ENTERPRISE=TRUE
-   GOOGLE_CLOUD_PROJECT=<your_gcp_project_id>
-   GOOGLE_CLOUD_LOCATION=global
-   ```
-
----
-
-## 💻 Local Execution
-
-You can run all three services concurrently in separate terminal windows from the `python/` directory. Make sure to run them in the order of MCP server first, then currency agent, then travel agent.
-
-### Step 1: Start Currency MCP Server
-
-Start MCP server locally in terminal 1 (runs on port 8080):
+## 🚀 Prerequisites & Setup
 
 ```bash
-uv run python currency_mcp_server/server.py
+git checkout production
+cd python
+uv sync
 ```
 
-### Step 2: Start Currency Agent
-
-Start the A2A currency agent locally in terminal 2 (runs on port 8081):
-
-```bash
-uv run python currency_agent/agent.py
-```
-
-### Step 3: Start Travel Agent
-
-Start the A2A travel agent locally in terminal 3 (runs on port 8082):
-
-```bash
-uv run python travel_agent/agent.py
-```
-
-### 🧪 Testing
-
-Test the MCP server:
-
-```bash
-uv run python currency_mcp_server/test_server.py
-```
-
-Test the currency agent over A2A with `a2a-cli` (or `uv run python currency_agent/test_a2aclient.py`):
-
-```bash
-a2a card get http://localhost:8081
-a2a send -a http://localhost:8081 "How much is 100 USD in GBP?"
-```
-
-Test the travel agent over A2A with `a2a-cli`:
-
-```bash
-# Inspect the Travel Agent's Agent Card
-a2a card get http://localhost:8082
-
-# Send an end-to-end travel query
-a2a send -a http://localhost:8082 \
-  "I'm planning a trip to London. What is the weather like and how much is 200 EUR in GBP?"
-```
-
-This runs end-to-end:
-1. Sends an A2A request to `travel_agent` (`:8082`).
-2. Queries weather forecasts (delegated to local `weather_agent` in `travel_agent/subagents/`).
-3. Queries currency conversion (delegated via A2A to `currency_agent` `:8081` -> `currency_mcp_server` `:8080`).
-
-> [!TIP]
-> **Optional Local Dev UI:** During local development, you can also run `uv run adk web` from the `python/` directory (with `currency_mcp_server` and `currency_agent` running) to chat with `travel_agent` in the browser and inspect tool calls and traces visually on `http://localhost:8000`.
-
----
-
-## ☁️ Cloud Run Deployment
-
-All three components include optimized Dockerfiles and can be deployed directly from source to Cloud Run. You can use `gcloud` to automatically capture service URLs and wire them into the next steps without manual copy-pasting.
-
-First, set some environment variables for your Google Cloud project and Cloud Run region:
+Set your environment variables:
 
 ```bash
 export PROJECT_ID=<YOUR_GOOGLE_CLOUD_PROJECT_ID>
-export REGION=europe-west1
+export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+export REGION=us-central1
+gcloud config set project $PROJECT_ID
 ```
 
-Enable the required Google Cloud APIs for Cloud Run, Cloud Build, Artifact Registry, and Vertex AI:
+Enable the required Google Cloud APIs:
 
 ```bash
-gcloud services enable run.googleapis.com \
-                       cloudbuild.googleapis.com \
-                       artifactregistry.googleapis.com \
-                       aiplatform.googleapis.com
+gcloud services enable \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  artifactregistry.googleapis.com \
+  aiplatform.googleapis.com \
+  agentregistry.googleapis.com \
+  modelarmor.googleapis.com \
+  networkservices.googleapis.com \
+  networksecurity.googleapis.com \
+  cloudtrace.googleapis.com
 ```
 
-> [!WARNING]
-> For simplicity in this getting-started sample, all services are deployed with `--allow-unauthenticated`, making them publicly accessible. **Do not use this configuration in production**—always lock down service-to-service traffic with IAM authentication, Agent Identity, and/or Agent Gateway.
+---
 
-### Step 1: Deploy Currency MCP Server
+## 1. Deploy & Auto-Register the MCP Server on Cloud Run
+
+**What this adds:** Locks down `currency-mcp-server` with `--no-allow-unauthenticated` (no public access) and automatically catalogs it in **Agent Registry** using `--functional-type=mcp-server` so downstream agents can discover it without hardcoded URLs.
 
 ```bash
-# Deploy MCP server
-gcloud run deploy currency-mcp-server \
+gcloud beta run deploy currency-mcp-server \
   --source currency_mcp_server \
   --region $REGION \
-  --allow-unauthenticated
-
-# Capture the deployed MCP server URL
-MCP_SERVER_URL=$(gcloud run services describe currency-mcp-server --region $REGION --format='value(status.url)')/mcp
-echo "MCP Server URL: $MCP_SERVER_URL"
+  --no-allow-unauthenticated \
+  --functional-type=mcp-server
 ```
 
-### Step 2: Deploy Currency Agent
-
-Since `currency-agent`'s public URL is only generated upon its first deployment, deploy the service first, capture its URL, and then set `AGENT_URL` via a fast configuration update:
+Verify that the MCP server was automatically registered in Agent Registry (and note its resource name, e.g., `mcpServers/<SERVER_ID>`):
 
 ```bash
-# 1. Deploy Currency Agent with the MCP Server URL
-gcloud run deploy currency-agent \
-  --source currency_agent \
-  --region $REGION \
-  --allow-unauthenticated \
-  --update-env-vars MCP_SERVER_URL="$MCP_SERVER_URL",GOOGLE_GENAI_USE_ENTERPRISE="true",GOOGLE_CLOUD_PROJECT="$PROJECT_ID",GOOGLE_CLOUD_LOCATION="global"
-
-# 2. Capture its assigned Cloud Run URL
-CURRENCY_AGENT_URL=$(gcloud run services describe currency-agent --region $REGION --format='value(status.url)')
-echo "Currency Agent URL: $CURRENCY_AGENT_URL"
-
-# 3. Update AGENT_URL so the agent advertises its public HTTPS endpoint in its Agent Card
-gcloud run services update currency-agent \
-  --region $REGION \
-  --update-env-vars AGENT_URL="$CURRENCY_AGENT_URL"
+gcloud agent-registry mcp-servers list --location=$REGION
+export MCP_SERVER_NAME="mcpServers/<SERVER_ID>"
 ```
 
-### Step 3: Deploy Travel Agent
+---
 
-Deploy `travel-agent` connected to `CURRENCY_AGENT_URL`, then set its `AGENT_URL` so its Agent Card advertises its public Cloud Run URL:
+## 2. Deploy `currency_agent` to Agent Runtime with Agent Identity & Observability
+
+**What this adds:**
+- **Agent Runtime**: Managed hosting for ADK agents with built-in scaling and automatic Agent Registry registration.
+- **Agent Identity** (`.agent_engine_config.json` with `"identity_type": "AGENT_IDENTITY"`): Gives `currency_agent` its own unique, managed cryptographic principal instead of sharing a broad service account.
+- **Agent Registry (`AgentRegistry.get_mcp_toolset`)**: Resolves `currency-mcp-server` dynamically and handles authentication automatically.
+- **Observability (`--otel_to_cloud`)**: Exports OpenTelemetry traces to Cloud Trace and Agent Platform Observability.
+
+Deploy `currency_agent`:
 
 ```bash
-# 1. Deploy Travel Agent connected to Currency Agent
-gcloud run deploy travel-agent \
-  --source travel_agent \
-  --region $REGION \
-  --allow-unauthenticated \
-  --update-env-vars CURRENCY_AGENT_URL="$CURRENCY_AGENT_URL",GOOGLE_GENAI_USE_ENTERPRISE="true",GOOGLE_CLOUD_PROJECT="$PROJECT_ID",GOOGLE_CLOUD_LOCATION="global"
-
-# 2. Capture its assigned Cloud Run URL
-TRAVEL_AGENT_URL=$(gcloud run services describe travel-agent --region $REGION --format='value(status.url)')
-echo "Travel Agent URL: $TRAVEL_AGENT_URL"
-
-# 3. Update AGENT_URL so the agent advertises its public HTTPS endpoint in its Agent Card
-gcloud run services update travel-agent \
-  --region $REGION \
-  --update-env-vars AGENT_URL="$TRAVEL_AGENT_URL"
+MCP_SERVER_NAME="$MCP_SERVER_NAME" \
+AGENT_REGISTRY_LOCATION="$REGION" \
+uv run adk deploy agent_engine \
+  --project=$PROJECT_ID \
+  --region=$REGION \
+  --display_name="currency-agent" \
+  --otel_to_cloud \
+  --agent_engine_config_file=currency_agent/.agent_engine_config.json \
+  currency_agent
 ```
 
-### 🧪 Testing
-
-Test the MCP server:
+Capture `currency_agent`'s Agent Engine ID and grant its **Agent Identity** least-privilege permissions (`roles/run.invoker` on `currency-mcp-server` and `roles/agentregistry.viewer`):
 
 ```bash
-MCP_SERVER_URL="$MCP_SERVER_URL" uv run python currency_mcp_server/test_server.py
+export CURRENCY_AGENT_ENGINE_ID=<CURRENCY_AGENT_ENGINE_ID>
+export CURRENCY_AGENT_PRINCIPAL="principal://agents.global.proj-${PROJECT_NUMBER}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${CURRENCY_AGENT_ENGINE_ID}"
+# Note: For projects inside a Google Cloud Organization, replace `proj-${PROJECT_NUMBER}` with `org-${ORG_ID}`.
+
+gcloud run services add-iam-policy-binding currency-mcp-server \
+  --region=$REGION \
+  --member="$CURRENCY_AGENT_PRINCIPAL" \
+  --role="roles/run.invoker"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="$CURRENCY_AGENT_PRINCIPAL" \
+  --role="roles/agentregistry.viewer"
 ```
 
-Test the currency agent over A2A:
+---
+
+## 3. Deploy `travel_agent` with Dynamic A2A Discovery
+
+**What this adds:** `travel_agent` looks up `currency_agent` dynamically from **Agent Registry** via `registry.get_remote_a2a_agent(...)`, runs under its own separate **Agent Identity**, and exports distributed traces linked across both agents.
+
+Look up `currency_agent`'s Agent Registry resource name:
 
 ```bash
-a2a card get "$CURRENCY_AGENT_URL"
-a2a send -a "$CURRENCY_AGENT_URL" "How much is 100 USD in GBP?"
+gcloud agent-registry agents list --location=$REGION
+export CURRENCY_AGENT_NAME="agents/<AGENT_ID>"
 ```
 
-Test the travel agent over A2A:
+Deploy `travel_agent`:
 
 ```bash
-a2a card get "$TRAVEL_AGENT_URL"
-a2a send -a "$TRAVEL_AGENT_URL" \
-  "I'm planning a trip to Tokyo. What is the weather like and how much is 500 USD in JPY?"
+CURRENCY_AGENT_NAME="$CURRENCY_AGENT_NAME" \
+AGENT_REGISTRY_LOCATION="$REGION" \
+uv run adk deploy agent_engine \
+  --project=$PROJECT_ID \
+  --region=$REGION \
+  --display_name="travel-agent" \
+  --otel_to_cloud \
+  --agent_engine_config_file=travel_agent/.agent_engine_config.json \
+  travel_agent
 ```
 
-This tests the complete end-to-end multi-agent system running in Cloud Run:
-1. Remote A2A invocation via `a2a-cli` to `travel-agent` on Cloud Run.
-2. In-process execution of the local `weather_agent` tool in Cloud Run.
-3. Remote A2A invocation across Cloud Run to `currency-agent`.
-4. Remote MCP invocation across Cloud Run to `currency-mcp-server`.
+Grant `travel_agent`'s **Agent Identity** permission to query Agent Registry and invoke `currency_agent`:
+
+```bash
+export TRAVEL_AGENT_ENGINE_ID=<TRAVEL_AGENT_ENGINE_ID>
+export TRAVEL_AGENT_PRINCIPAL="principal://agents.global.proj-${PROJECT_NUMBER}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${TRAVEL_AGENT_ENGINE_ID}"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="$TRAVEL_AGENT_PRINCIPAL" \
+  --role="roles/agentregistry.viewer"
+```
+
+---
+
+## 4. Govern Traffic with Agent Gateway & Model Armor
+
+**What this adds:**
+- **Agent Gateway**: Central policy enforcement point for both **Client-to-Agent (ingress)** and **Agent-to-Anywhere (egress)** traffic. Egress gateways default to **deny-all** until an explicit `AuthzPolicy` allows approved traffic.
+- **Model Armor**: Inspects and sanitizes prompts and tool responses in flight to block prompt injections, jailbreaks, and PII leakage.
+
+Import the gateway YAML templates from [`policies/`](../policies/):
+
+```bash
+# 1. Client-to-Agent (ingress) gateway
+gcloud network-services agent-gateways import travel-agent-ingress-gateway \
+  --source=../policies/agent-gateway-ingress.yaml \
+  --location=$REGION
+
+# 2. Agent-to-Anywhere (egress) gateway wired to Agent Registry
+envsubst < ../policies/agent-gateway-egress.yaml > /tmp/agent-gateway-egress.yaml
+gcloud network-services agent-gateways import travel-agent-egress-gateway \
+  --source=/tmp/agent-gateway-egress.yaml \
+  --location=$REGION
+```
+
+Create a **Model Armor** template (with prompt-injection & jailbreak detection) and attach it to your gateway in the Google Cloud Console (**Gemini Enterprise Agent Platform → Governance → Agent Gateway**) or via `gcloud model-armor templates create`.
+
+---
+
+## 5. Observability & Evaluation
+
+### Observability
+**What this adds:** Because both agents were deployed with `--otel_to_cloud`, every request generates an end-to-end OpenTelemetry trace in **Cloud Trace** and **Agent Platform Observability**—showing `travel_agent` LLM calls, in-process `weather_agent` execution, remote A2A delegation to `currency_agent`, and the MCP tool call to `currency_mcp_server`.
+
+### Automated Evaluation (`adk eval`)
+**What this adds:** Prevents silent regressions when you change prompts, models, or tools by verifying both **tool trajectory** (did `travel_agent` call `weather_agent` and `currency_agent`?) and **response quality**.
+
+With the three services running locally (`currency_mcp_server`, `currency_agent`, `travel_agent`), run the evaluation suite in [`evals/`](evals/):
+
+```bash
+uv run adk eval \
+  travel_agent \
+  evals/travel_agent.evalset.json \
+  --config_file_path=evals/test_config.json \
+  --print_detailed_results
+```
+
+You can also run offline, online, and simulated evaluations directly on your deployed Agent Runtime instance in the **Agent Platform Evaluation** console using trajectory metrics (`trajectory_any_order_match`, `trajectory_precision`, `trajectory_recall`).

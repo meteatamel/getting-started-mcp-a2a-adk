@@ -3,8 +3,8 @@ import os
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from google.adk.agents import LlmAgent
 from google.adk.a2a.utils.agent_to_a2a import to_a2a
+from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
 logger = logging.getLogger(__name__)
@@ -20,11 +20,35 @@ SYSTEM_INSTRUCTION = (
     "Do not attempt to answer unrelated questions or use tools for other purposes."
 )
 
-mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/mcp")
-if not mcp_server_url.endswith("/mcp"):
-    mcp_server_url = f"{mcp_server_url.rstrip('/')}/mcp"
+# In production, resolve the MCP server dynamically from Google Cloud Agent Registry
+# (no hardcoded URLs; Agent Registry also handles authentication via Agent Identity).
+# Locally, fall back to MCP_SERVER_URL (default: http://localhost:8080/mcp).
+MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME")
 
-logger.info(f"--- 🔧 Loading MCP tools from MCP Server at {mcp_server_url}... ---")
+if MCP_SERVER_NAME:
+    from google.adk.integrations.agent_registry.agent_registry import AgentRegistry
+
+    project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+    location = os.getenv("AGENT_REGISTRY_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
+    logger.info(
+        "--- 📒 Resolving MCP server '%s' from Agent Registry (%s/%s)... ---",
+        MCP_SERVER_NAME,
+        project_id,
+        location,
+    )
+    registry = AgentRegistry(project_id=project_id, location=location)
+    mcp_toolset = registry.get_mcp_toolset(mcp_server_name=MCP_SERVER_NAME)
+else:
+    mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/mcp")
+    if not mcp_server_url.endswith("/mcp"):
+        mcp_server_url = f"{mcp_server_url.rstrip('/')}/mcp"
+    logger.info("--- 🔧 Loading MCP tools from MCP Server at %s... ---", mcp_server_url)
+    mcp_toolset = McpToolset(
+        connection_params=StreamableHTTPConnectionParams(
+            url=mcp_server_url,
+        )
+    )
+
 logger.info("--- 🤖 Creating ADK Currency Agent... ---")
 
 root_agent = LlmAgent(
@@ -32,13 +56,7 @@ root_agent = LlmAgent(
     name="currency_agent",
     description="An agent that can help with currency conversions",
     instruction=SYSTEM_INSTRUCTION,
-    tools=[
-        McpToolset(
-            connection_params=StreamableHTTPConnectionParams(
-                url=mcp_server_url,
-            )
-        )
-    ],
+    tools=[mcp_toolset],
 )
 
 # Make the agent A2A-compatible

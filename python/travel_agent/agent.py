@@ -9,7 +9,7 @@ from google.adk.agents.remote_a2a_agent import AGENT_CARD_WELL_KNOWN_PATH, Remot
 from google.adk.tools.agent_tool import AgentTool
 
 try:
-    from travel_agent.subagents.weather_agent import weather_agent
+    from .subagents.weather_agent import weather_agent
 except ImportError:
     from subagents.weather_agent import weather_agent
 
@@ -27,18 +27,35 @@ SYSTEM_INSTRUCTION = (
     "delegate the request to the 'weather_agent' tool."
 )
 
-CURRENCY_AGENT_URL = os.getenv("CURRENCY_AGENT_URL", "http://localhost:8081").rstrip("/")
+# In production, resolve the remote currency_agent dynamically from Google Cloud Agent Registry
+# (no hardcoded URLs; Agent Registry also handles A2A authentication via Agent Identity).
+# Locally, fall back to CURRENCY_AGENT_URL (default: http://localhost:8081).
+CURRENCY_AGENT_NAME = os.getenv("CURRENCY_AGENT_NAME")
 
-logger.info(
-    "--- 🔗 Connecting to Remote A2A Currency Agent at %s... ---",
-    CURRENCY_AGENT_URL,
-)
+if CURRENCY_AGENT_NAME:
+    from google.adk.integrations.agent_registry.agent_registry import AgentRegistry
 
-currency_remote_agent = RemoteA2aAgent(
-    name="currency_agent",
-    agent_card=f"{CURRENCY_AGENT_URL}{AGENT_CARD_WELL_KNOWN_PATH}",
-    description="An agent that can help with currency conversions and exchange rates.",
-)
+    project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+    location = os.getenv("AGENT_REGISTRY_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
+    logger.info(
+        "--- 📒 Resolving remote A2A agent '%s' from Agent Registry (%s/%s)... ---",
+        CURRENCY_AGENT_NAME,
+        project_id,
+        location,
+    )
+    registry = AgentRegistry(project_id=project_id, location=location)
+    currency_remote_agent = registry.get_remote_a2a_agent(agent_name=CURRENCY_AGENT_NAME)
+else:
+    currency_agent_url = os.getenv("CURRENCY_AGENT_URL", "http://localhost:8081").rstrip("/")
+    logger.info(
+        "--- 🔗 Connecting to Remote A2A Currency Agent at %s... ---",
+        currency_agent_url,
+    )
+    currency_remote_agent = RemoteA2aAgent(
+        name="currency_agent",
+        agent_card=f"{currency_agent_url}{AGENT_CARD_WELL_KNOWN_PATH}",
+        description="An agent that can help with currency conversions and exchange rates.",
+    )
 
 logger.info("--- 🤖 Creating ADK Travel Agent... ---")
 

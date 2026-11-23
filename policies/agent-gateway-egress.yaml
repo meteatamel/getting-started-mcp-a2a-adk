@@ -1,0 +1,17 @@
+# Agent Gateway in Agent-to-Anywhere (egress) mode
+# Governs all outbound tool calls (MCP) and agent-to-agent calls (A2A)
+# against your Agent Registry catalog.
+#
+# Replace PROJECT_ID and REGION before importing, or use envsubst:
+#   envsubst < policies/agent-gateway-egress.yaml > /tmp/agent-gateway-egress.yaml
+#   gcloud network-services agent-gateways import travel-agent-egress-gateway \
+#     --source=/tmp/agent-gateway-egress.yaml \
+#     --location=$REGION
+name: travel-agent-egress-gateway
+protocols:
+  - MCP
+  - A2A
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - //agentregistry.googleapis.com/projects/${PROJECT_ID}/locations/${REGION}

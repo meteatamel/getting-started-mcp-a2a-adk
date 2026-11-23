@@ -1,0 +1,19 @@
+# Authorization Policy (AuthzPolicy) for Agent-to-Anywhere egress gateway
+# Every Agent-to-Anywhere Agent Gateway defaults to deny-all until an
+# AuthzPolicy is attached.
+#
+# Replace PROJECT_ID and REGION before importing, or use envsubst:
+#   envsubst < policies/authz-policy.yaml > /tmp/authz-policy.yaml
+#   gcloud network-security authz-policies import travel-agent-egress-authz \
+#     --source=/tmp/authz-policy.yaml \
+#     --location=$REGION
+name: travel-agent-egress-authz
+policyProfile: REQUEST_AUTHZ
+target:
+  resources:
+    - projects/${PROJECT_ID}/locations/${REGION}/agentGateways/travel-agent-egress-gateway
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - projects/${PROJECT_ID}/locations/${REGION}/authzExtensions/travel-agent-iap-authz-ext
