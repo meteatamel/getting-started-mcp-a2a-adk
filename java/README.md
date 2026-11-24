@@ -149,6 +149,17 @@ gcloud services enable run.googleapis.com \
 > [!WARNING]
 > For simplicity in this getting-started sample, all services are deployed with `--allow-unauthenticated`, making them publicly accessible. **Do not use this configuration in production**—always lock down service-to-service traffic with IAM authentication, Agent Identity, and/or Agent Gateway.
 
+### Quick Deploy (`deploy.sh`)
+
+Run the included [`deploy.sh`](deploy.sh) script to deploy all three services in order (`currency-mcp-server` → `currency-agent` + `AGENT_URL` update → `travel-agent` + `AGENT_URL` update) and save the resulting URLs to `.env.cloudrun`:
+
+```bash
+./deploy.sh
+source .env.cloudrun
+```
+
+*(You can also inspect `deploy.sh` or run the three steps manually below.)*
+
 ### Step 1: Deploy Currency MCP Server
 
 ```bash
