@@ -1,6 +1,7 @@
 # Productionizing MCP, A2A & ADK on Google Cloud (`production` branch)
 
 [![Branch](https://img.shields.io/badge/Branch-production_(Part_2)-34A853.svg)](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/production)
+[![Codelab](https://img.shields.io/badge/Codelab-Part_2-4285F4.svg)](https://codelabs.developers.google.com/productionizing-mcp-a2a-adk)
 [![Part 1](https://img.shields.io/badge/Part_1-main_(Getting_Started)-4285F4.svg)](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/main)
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-ADK-4285F4.svg)](https://adk.dev/)
@@ -8,6 +9,8 @@
 [![Protocol](https://img.shields.io/badge/Protocol-MCP-EA4335.svg)](https://modelcontextprotocol.io/)
 
 This **`production` branch** is **Part 2** of the `getting-started-mcp-a2a-adk` sample. It takes the exact 3-tier multi-agent system from Part 1 ([`main` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/main))—`travel_agent` → `currency_agent` (A2A) → `currency_mcp_server` (MCP)—and productionizes it on Google Cloud using the **Gemini Enterprise Agent Platform** (**Scale → Govern → Optimize**).
+
+> 🎓 **Hands-on Codelab (Part 2):** Follow the step-by-step tutorial at **[Productionizing MCP, A2A & ADK on Google Cloud](https://codelabs.developers.google.com/productionizing-mcp-a2a-adk)**.
 
 ![Production Architecture Overview](images/architecture.png)
 
@@ -78,5 +81,6 @@ Run `git diff main..production --stat` to see the exact delta from Part 1:
 
 ## 🚀 Getting Started
 
+- **[Part 2 Codelab: Productionizing MCP, A2A & ADK on Google Cloud](https://codelabs.developers.google.com/productionizing-mcp-a2a-adk)** — Interactive step-by-step Google Codelab walkthrough.
 - **[Python Productionizing Guide (`python/README.md`)](python/README.md)** — Full step-by-step commands for local dev, Cloud Run + Agent Runtime deployment, Agent Registry, Agent Identity, Agent Gateway + Model Armor, Observability, and Evaluation.
 - **Part 1 (Getting Started)**: Switch to the [`main`](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/main) branch.
