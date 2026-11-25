@@ -27,9 +27,11 @@ MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME")
 
 if MCP_SERVER_NAME:
     from google.adk.integrations.agent_registry.agent_registry import AgentRegistry
+    from google.auth.transport.requests import Request as AuthRequest
+    from google.oauth2 import id_token
 
     project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
-    location = os.getenv("AGENT_REGISTRY_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
+    location = os.getenv("REGION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
     logger.info(
         "--- 📒 Resolving MCP server '%s' from Agent Registry (%s/%s)... ---",
         MCP_SERVER_NAME,
@@ -37,6 +39,24 @@ if MCP_SERVER_NAME:
         location,
     )
     registry = AgentRegistry(project_id=project_id, location=location)
+    server_info = registry.get_mcp_server(MCP_SERVER_NAME)
+    mcp_url = server_info["interfaces"][0]["url"]
+    audience = f"{urlparse(mcp_url).scheme}://{urlparse(mcp_url).netloc}"
+
+    def _cloud_run_auth_headers(_context) -> dict[str, str]:
+        # Agent Identity requests mTLS-bound ID tokens by default; pass bind_id_token=False
+        # when calling a standard *.run.app Cloud Run URL without mTLS.
+        try:
+            token = id_token.fetch_id_token(AuthRequest(), audience, bind_id_token=False)
+        except TypeError:
+            token = id_token.fetch_id_token(AuthRequest(), audience)
+        return {"Authorization": f"Bearer {token}"}
+
+    registry = AgentRegistry(
+        project_id=project_id,
+        location=location,
+        header_provider=_cloud_run_auth_headers,
+    )
     mcp_toolset = registry.get_mcp_toolset(mcp_server_name=MCP_SERVER_NAME)
 else:
     mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/mcp")
@@ -52,7 +72,7 @@ else:
 logger.info("--- 🤖 Creating ADK Currency Agent... ---")
 
 root_agent = LlmAgent(
-    model="gemini-3.8-flash",
+    model="gemini-2.5-flash",
     name="currency_agent",
     description="An agent that can help with currency conversions",
     instruction=SYSTEM_INSTRUCTION,

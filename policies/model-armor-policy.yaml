@@ -1,0 +1,18 @@
+name: travel-agent-model-armor-policy
+target:
+  resources:
+    - "projects/${PROJECT_ID}/locations/${REGION}/agentGateways/travel-agent-egress-gateway"
+policyProfile: CONTENT_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${PROJECT_ID}/locations/${REGION}/authzExtensions/travel-agent-model-armor-ext"
+httpRules:
+  - to:
+      operations:
+        - paths:
+            - prefix: "/"
+    when: >-
+      request.headers['content-type'] == 'application/json' ||
+      request.headers['content-type'].startsWith('text/')

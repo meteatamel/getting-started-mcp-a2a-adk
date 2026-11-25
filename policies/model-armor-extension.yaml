@@ -1,0 +1,6 @@
+name: travel-agent-model-armor-ext
+service: modelarmor.${REGION}.rep.googleapis.com
+metadata:
+  model_armor_settings: '[{"request_template_id":"projects/${PROJECT_ID}/locations/${REGION}/templates/travel-agent-guardrails","response_template_id":"projects/${PROJECT_ID}/locations/${REGION}/templates/travel-agent-guardrails"}]'
+failOpen: false
+timeout: 1s

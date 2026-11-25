@@ -129,6 +129,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.cloudrun
 .venv
 env/
 venv/
@@ -183,6 +184,7 @@ target/
 .mvn/
 .DS_Store
 
-# Local codelab preview
+# Local codelab preview & IDE
 codelab/
+.vscode/
 

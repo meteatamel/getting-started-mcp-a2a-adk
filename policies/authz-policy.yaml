@@ -2,8 +2,8 @@
 # Every Agent-to-Anywhere Agent Gateway defaults to deny-all until an
 # AuthzPolicy is attached.
 #
-# Replace PROJECT_ID and REGION before importing, or use envsubst:
-#   envsubst < policies/authz-policy.yaml > /tmp/authz-policy.yaml
+# Replace PROJECT_ID and REGION before importing:
+#   sed "s/\${PROJECT_ID}/$PROJECT_ID/g; s/\${REGION}/$REGION/g" policies/authz-policy.yaml > /tmp/authz-policy.yaml
 #   gcloud network-security authz-policies import travel-agent-egress-authz \
 #     --source=/tmp/authz-policy.yaml \
 #     --location=$REGION

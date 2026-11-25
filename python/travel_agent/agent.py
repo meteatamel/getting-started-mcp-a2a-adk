@@ -33,10 +33,25 @@ SYSTEM_INSTRUCTION = (
 CURRENCY_AGENT_NAME = os.getenv("CURRENCY_AGENT_NAME")
 
 if CURRENCY_AGENT_NAME:
+    import google.auth
+    from google.auth.transport.requests import Request as AuthRequest
     from google.adk.integrations.agent_registry.agent_registry import AgentRegistry
+    import httpx
+
+    class _GoogleBearerAuth(httpx.Auth):
+        def __init__(self) -> None:
+            self._credentials, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+
+        def auth_flow(self, request: httpx.Request):
+            if not self._credentials.valid:
+                self._credentials.refresh(AuthRequest())
+            request.headers["Authorization"] = f"Bearer {self._credentials.token}"
+            yield request
 
     project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
-    location = os.getenv("AGENT_REGISTRY_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
+    location = os.getenv("REGION", os.getenv("GOOGLE_CLOUD_LOCATION", "global"))
     logger.info(
         "--- 📒 Resolving remote A2A agent '%s' from Agent Registry (%s/%s)... ---",
         CURRENCY_AGENT_NAME,
@@ -44,7 +59,18 @@ if CURRENCY_AGENT_NAME:
         location,
     )
     registry = AgentRegistry(project_id=project_id, location=location)
-    currency_remote_agent = registry.get_remote_a2a_agent(agent_name=CURRENCY_AGENT_NAME)
+    currency_remote_agent = registry.get_remote_a2a_agent(
+        agent_name=CURRENCY_AGENT_NAME,
+        httpx_client=httpx.AsyncClient(auth=_GoogleBearerAuth(), timeout=60.0),
+    )
+    # Agent Runtime's A2aAgent template leaves supportedInterfaces[0].url as
+    # http://localhost:9999/ in the stored card while putting the real endpoint in card.url.
+    agent_info = registry.get_agent_info(CURRENCY_AGENT_NAME)
+    real_url = agent_info.get("card", {}).get("content", {}).get("url")
+    card = getattr(currency_remote_agent, "_agent_card", None)
+    if real_url and card and getattr(card, "supported_interfaces", None):
+        if card.supported_interfaces[0].url.startswith("http://localhost"):
+            card.supported_interfaces[0].url = real_url
 else:
     currency_agent_url = os.getenv("CURRENCY_AGENT_URL", "http://localhost:8081").rstrip("/")
     logger.info(
@@ -60,7 +86,7 @@ else:
 logger.info("--- 🤖 Creating ADK Travel Agent... ---")
 
 root_agent = LlmAgent(
-    model="gemini-3.8-flash",
+    model="gemini-2.5-flash",
     name="travel_agent",
     description="A travel assistant that can help plan trips, check weather forecasts via the local weather agent, and convert currencies via the remote currency agent.",
     instruction=SYSTEM_INSTRUCTION,

@@ -8,6 +8,6 @@
 #     --location=$REGION
 name: travel-agent-ingress-gateway
 protocols:
-  - A2A
+  - MCP
 googleManaged:
   governedAccessPath: CLIENT_TO_AGENT

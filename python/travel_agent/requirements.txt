@@ -1,0 +1,6 @@
+google-cloud-aiplatform[agent_engines,adk]>=1.156.0
+google-adk[a2a,agent-identity,mcp]>=2.10.0
+a2a-sdk[http-server]>=1.0.0
+google-genai>=2.25.0
+python-dotenv>=1.1.0
+httpx>=0.28.1
