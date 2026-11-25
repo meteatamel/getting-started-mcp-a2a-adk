@@ -33,7 +33,10 @@ SYSTEM_INSTRUCTION = (
 CURRENCY_AGENT_NAME = os.getenv("CURRENCY_AGENT_NAME")
 
 if CURRENCY_AGENT_NAME:
+    import ssl
+    import tempfile
     import google.auth
+    from google.auth.transport import mtls
     from google.auth.transport.requests import Request as AuthRequest
     from google.adk.integrations.agent_registry.agent_registry import AgentRegistry
     import httpx
@@ -59,14 +62,32 @@ if CURRENCY_AGENT_NAME:
         location,
     )
     registry = AgentRegistry(project_id=project_id, location=location)
+
+    # Agent Identity issues mTLS-bound OAuth tokens; when workload client certs are
+    # present on Agent Runtime, configure mTLS on httpx and use *.mtls.googleapis.com.
+    httpx_kwargs: dict = {"auth": _GoogleBearerAuth(), "timeout": 60.0}
+    use_mtls = False
+    if mtls.has_default_client_cert_source():
+        cert_bytes, key_bytes = mtls.default_client_cert_source()()
+        with tempfile.NamedTemporaryFile(delete=False) as cert_f, tempfile.NamedTemporaryFile(delete=False) as key_f:
+            cert_f.write(cert_bytes)
+            key_f.write(key_bytes)
+            cert_path, key_path = cert_f.name, key_f.name
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        httpx_kwargs["verify"] = ssl_ctx
+        use_mtls = True
+
     currency_remote_agent = registry.get_remote_a2a_agent(
         agent_name=CURRENCY_AGENT_NAME,
-        httpx_client=httpx.AsyncClient(auth=_GoogleBearerAuth(), timeout=60.0),
+        httpx_client=httpx.AsyncClient(**httpx_kwargs),
     )
     # Agent Runtime's A2aAgent template leaves supportedInterfaces[0].url as
     # http://localhost:9999/ in the stored card while putting the real endpoint in card.url.
     agent_info = registry.get_agent_info(CURRENCY_AGENT_NAME)
     real_url = agent_info.get("card", {}).get("content", {}).get("url")
+    if real_url and use_mtls and ".googleapis.com" in real_url and ".mtls.googleapis.com" not in real_url:
+        real_url = real_url.replace(".googleapis.com", ".mtls.googleapis.com", 1)
     card = getattr(currency_remote_agent, "_agent_card", None)
     if real_url and card and getattr(card, "supported_interfaces", None):
         if card.supported_interfaces[0].url.startswith("http://localhost"):

@@ -49,15 +49,17 @@ def main() -> None:
     args = parse_args()
     base_dir = Path(__file__).resolve().parent
 
-    module_name = f"{args.agent_dir}.a2a_runtime"
-    runtime_path = base_dir / args.agent_dir / "a2a_runtime.py"
-    # Load a2a_runtime.py directly so <agent_dir>/__init__.py (and agent.py) is not
-    # imported locally during deployment metadata inspection.
+    entrypoint_objects = {
+        "currency_agent": "currency_a2a_agent",
+        "travel_agent": "travel_a2a_agent",
+    }
+    entrypoint_object = entrypoint_objects[args.agent_dir]
+    runtime_path = base_dir / "a2a_runtime.py"
     spec = importlib.util.spec_from_file_location("_a2a_runtime_inspect", runtime_path)
     runtime_module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     spec.loader.exec_module(runtime_module)
-    a2a_agent = runtime_module.a2a_agent
+    a2a_agent = getattr(runtime_module, entrypoint_object)
 
     ops = a2a_agent.register_operations()
     class_methods_proto = _agent_engines._generate_class_methods_spec_or_raise(
@@ -81,9 +83,9 @@ def main() -> None:
 
     config = {
         "display_name": args.display_name,
-        "entrypoint_module": module_name,
-        "entrypoint_object": "a2a_agent",
-        "source_packages": [args.agent_dir],
+        "entrypoint_module": "a2a_runtime",
+        "entrypoint_object": entrypoint_object,
+        "source_packages": ["a2a_runtime.py", args.agent_dir],
         "requirements_file": f"{args.agent_dir}/requirements.txt",
         "class_methods": class_methods,
         "agent_framework": "google-adk",
