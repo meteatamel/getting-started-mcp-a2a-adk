@@ -28,7 +28,9 @@ SYSTEM_INSTRUCTION = (
 )
 
 # In production, resolve the remote currency_agent dynamically from Google Cloud Agent Registry
-# (no hardcoded URLs; Agent Registry also handles A2A authentication via Agent Identity).
+# (no hardcoded URLs). Because get_remote_a2a_agent() does not attach Google bearer/mTLS
+# auth unless an Agent Registry AuthProvider binding is configured, we pass an httpx.AsyncClient
+# configured with ADC bearer tokens and Agent Identity's workload mTLS client certificates.
 # Locally, fall back to CURRENCY_AGENT_URL (default: http://localhost:8081).
 CURRENCY_AGENT_NAME = os.getenv("CURRENCY_AGENT_NAME")
 
@@ -107,7 +109,7 @@ else:
 logger.info("--- 🤖 Creating ADK Travel Agent... ---")
 
 root_agent = LlmAgent(
-    model="gemini-2.5-flash",
+    model="gemini-3.8-flash",
     name="travel_agent",
     description="A travel assistant that can help plan trips, check weather forecasts via the local weather agent, and convert currencies via the remote currency agent.",
     instruction=SYSTEM_INSTRUCTION,

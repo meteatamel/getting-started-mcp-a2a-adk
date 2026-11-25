@@ -8,6 +8,7 @@ dependencies = [
     "currency-mcp-server",
     "currency-agent",
     "travel-agent",
+    "google-cloud-aiplatform[agent_engines,adk]>=1.156.0",
 ]
 
 [tool.uv.sources]

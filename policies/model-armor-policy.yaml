@@ -1,3 +1,11 @@
+# Content Authorization Policy (CONTENT_AUTHZ) attaching Model Armor to the
+# Agent-to-Anywhere egress gateway to inspect outbound A2A/MCP payloads.
+#
+# Substitute PROJECT_ID and REGION before importing:
+#   envsubst < policies/model-armor-policy.yaml > /tmp/model-armor-policy.yaml
+#   gcloud network-security authz-policies import travel-agent-model-armor-policy \
+#     --source=/tmp/model-armor-policy.yaml \
+#     --location=$REGION
 name: travel-agent-model-armor-policy
 target:
   resources:
@@ -14,5 +22,5 @@ httpRules:
         - paths:
             - prefix: "/"
     when: >-
-      request.headers['content-type'] == 'application/json' ||
+      request.headers['content-type'].startsWith('application/json') ||
       request.headers['content-type'].startsWith('text/')

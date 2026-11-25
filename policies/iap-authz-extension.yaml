@@ -2,6 +2,11 @@
 # Starts in DRY_RUN (audit-only) mode per Google Cloud best practices so you
 # can audit outbound traffic before enforcing IAM Unified Access Policies (UAPs).
 # Remove `iamEnforcementMode: "DRY_RUN"` once your UAPs are in place.
+#
+# Import with:
+#   gcloud service-extensions authz-extensions import travel-agent-iap-authz-ext \
+#     --source=policies/iap-authz-extension.yaml \
+#     --location=$REGION
 name: travel-agent-iap-authz-ext
 service: iap.googleapis.com
 failOpen: false

@@ -61,7 +61,7 @@ def get_weather(location: str = "London") -> dict:
 
 
 weather_agent = LlmAgent(
-    model="gemini-2.5-flash",
+    model="gemini-3.8-flash",
     name="weather_agent",
     description="A local specialist agent that provides current weather reports and forecasts for travel destinations.",
     instruction=SYSTEM_INSTRUCTION,

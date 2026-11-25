@@ -21,7 +21,10 @@ SYSTEM_INSTRUCTION = (
 )
 
 # In production, resolve the MCP server dynamically from Google Cloud Agent Registry
-# (no hardcoded URLs; Agent Registry also handles authentication via Agent Identity).
+# (no hardcoded URLs). AgentRegistry.get_mcp_toolset() only auto-attaches OAuth
+# tokens for *.googleapis.com endpoints, so for a private Cloud Run (*.run.app)
+# MCP server we supply a header_provider that fetches an OIDC ID token using this
+# agent's managed Agent Identity.
 # Locally, fall back to MCP_SERVER_URL (default: http://localhost:8080/mcp).
 MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME")
 
@@ -38,14 +41,12 @@ if MCP_SERVER_NAME:
         project_id,
         location,
     )
-    registry = AgentRegistry(project_id=project_id, location=location)
-    server_info = registry.get_mcp_server(MCP_SERVER_NAME)
-    mcp_url = server_info["interfaces"][0]["url"]
-    audience = f"{urlparse(mcp_url).scheme}://{urlparse(mcp_url).netloc}"
+    audience: str | None = None
 
     def _cloud_run_auth_headers(_context) -> dict[str, str]:
         # Agent Identity requests mTLS-bound ID tokens by default; pass bind_id_token=False
         # when calling a standard *.run.app Cloud Run URL without mTLS.
+        assert audience is not None
         try:
             token = id_token.fetch_id_token(AuthRequest(), audience, bind_id_token=False)
         except TypeError:
@@ -57,6 +58,9 @@ if MCP_SERVER_NAME:
         location=location,
         header_provider=_cloud_run_auth_headers,
     )
+    server_info = registry.get_mcp_server(MCP_SERVER_NAME)
+    mcp_url = server_info["interfaces"][0]["url"]
+    audience = f"{urlparse(mcp_url).scheme}://{urlparse(mcp_url).netloc}"
     mcp_toolset = registry.get_mcp_toolset(mcp_server_name=MCP_SERVER_NAME)
 else:
     mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/mcp")
@@ -72,7 +76,7 @@ else:
 logger.info("--- 🤖 Creating ADK Currency Agent... ---")
 
 root_agent = LlmAgent(
-    model="gemini-2.5-flash",
+    model="gemini-3.8-flash",
     name="currency_agent",
     description="An agent that can help with currency conversions",
     instruction=SYSTEM_INSTRUCTION,

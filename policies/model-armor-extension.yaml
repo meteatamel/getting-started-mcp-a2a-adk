@@ -1,3 +1,12 @@
+# Model Armor Authorization Extension for Agent-to-Anywhere egress gateway.
+# Calls out to the regional Model Armor endpoint to sanitize request and
+# response payloads against the travel-agent-guardrails template.
+#
+# Substitute PROJECT_ID and REGION before importing:
+#   envsubst < policies/model-armor-extension.yaml > /tmp/model-armor-extension.yaml
+#   gcloud service-extensions authz-extensions import travel-agent-model-armor-ext \
+#     --source=/tmp/model-armor-extension.yaml \
+#     --location=$REGION
 name: travel-agent-model-armor-ext
 service: modelarmor.${REGION}.rep.googleapis.com
 metadata:

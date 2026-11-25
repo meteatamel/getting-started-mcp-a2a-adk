@@ -15,10 +15,18 @@ from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactServ
 from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
+import vertexai
 from vertexai.agent_engines.templates.a2a import A2aAgent, create_agent_card
+
+if region := os.getenv("REGION"):
+    vertexai.init(location=region)
 
 
 def _build_currency_runner() -> Runner:
+    # gemini-3.8-flash is served via the global Vertex AI endpoint; Agent Engine
+    # reserves GOOGLE_CLOUD_LOCATION in env_vars, so override it at runtime while
+    # A2aAgent and AgentRegistry continue using REGION (e.g. europe-west1).
+    os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
     from currency_agent.agent import root_agent
 
     return Runner(
@@ -31,6 +39,7 @@ def _build_currency_runner() -> Runner:
 
 
 def _build_travel_runner() -> Runner:
+    os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
     from travel_agent.agent import root_agent
 
     return Runner(
@@ -54,13 +63,10 @@ def _make_a2a_agent(
         description=description,
         skills=[skill],
     )
-    agent = A2aAgent(
+    return A2aAgent(
         agent_card=card,
         agent_executor_builder=lambda: A2aAgentExecutor(runner=runner_builder),
     )
-    if region := os.getenv("REGION"):
-        agent._tmpl_attrs["location"] = region
-    return agent
 
 
 currency_a2a_agent = _make_a2a_agent(
