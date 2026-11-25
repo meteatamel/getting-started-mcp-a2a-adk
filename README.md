@@ -14,7 +14,7 @@ All services can be run completely locally or fully deployed to Google Cloud Run
 
 > 🎓 **Hands-on Codelab (Part 1):** Follow the step-by-step tutorial at **[Getting Started with MCP, A2A, and ADK Codelab](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk)**.
 >
-> 🚀 **Ready for Production (Part 2)?** Check out the **[`production` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/production)** to productionize this multi-agent system with **Agent Runtime**, **Agent Registry**, **Agent Identity**, **Agent Gateway + Model Armor**, **Observability**, and **Evaluation**.
+> 🚀 **Ready for Production (Part 2)?** Check out the **[`production` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/production)** and the **[Productionizing MCP, A2A & ADK on Google Cloud Codelab](https://codelabs.developers.google.com/productionizing-mcp-a2a-adk)** to productionize this multi-agent system with **Agent Runtime**, **Agent Registry**, **Agent Identity**, **Agent Gateway + Model Armor**, **Observability**, and **Evaluation**.
 
 ![Architecture Overview](images/architecture.png)
 
@@ -111,7 +111,8 @@ Choose your language to get started:
 
 - **[Python Getting Started Guide (`python/README.md`)](python/README.md)**
 - **[Java Getting Started Guide (`java/README.md`)](java/README.md)**
-- **[Step-by-Step Codelab](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk)**
+- **[Step-by-Step Codelab (Part 1)](https://codelabs.developers.google.com/getting-started-mcp-a2a-adk)**
+- **[Productionizing Codelab (Part 2)](https://codelabs.developers.google.com/productionizing-mcp-a2a-adk)** ([`production` branch](https://github.com/meteatamel/getting-started-mcp-a2a-adk/tree/production))
 
 ---
 
